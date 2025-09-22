@@ -17,7 +17,7 @@ declare -Ag settings=(
 )
 
 if [[ ${BASH_VERSION:0:1} -lt 4 ]]; then
-  printf "Bash is version %s; minimum required version is Bash 4." "$BASH_VERSION" >&2
+  printf "Bash is version %s; minimum required version is Bash 4.\n" "$BASH_VERSION" >&2
   exit 1
 fi
 
@@ -43,7 +43,7 @@ get_manifest_file() {
 
 validate_manifest_file() {
   [[ -z "$manifest_file" ]] && {
-    printf "Manifest file location could not be resolved" >&2
+    printf "Manifest file location could not be resolved!\n" >&2
     exit 1
   }
 }
@@ -98,7 +98,7 @@ set_config() {
 
   [[ -z $key || -z $value ]] && exit 1 # TODO: Expand this error case
   [[ " ${!settings[*]} " == *" $key "* ]] || {
-    printf "Unknown configuration key: %s" "$key" >&2
+    printf "Unknown configuration key: %s\n" "$key" >&2
     exit 1
   }
 
@@ -111,7 +111,7 @@ unset_config() {
 
   [[ -z $key || -z $value ]] && exit 1 # TODO: Expand this error case
   validate_key $key || {
-    printf "Unknown configuration key: %s" "$key" >&2
+    printf "Unknown configuration key: %s\n" "$key" >&2
     exit 1
   }
 
@@ -220,7 +220,7 @@ main() {
       --file* | -f)
         manifest_file="$2"
         shift 2 2> /dev/null || {
-          printf "No file passed" >&2
+          printf "No file passed to %s!\n" "$1" >&2
           exit 1
         }
         ;;
@@ -231,7 +231,7 @@ main() {
       ### ACTIONS ###
       save | update)
         [[ -z "$MODE" ]] || {
-          printf "Multiple actions are not supported!" >&2
+          printf "Multiple actions are not supported!\n" >&2
           exit 1
         }
         MODE="save"
@@ -258,13 +258,13 @@ main() {
         }
         settings["commitMessage"]=$2
         shift 2 2> /dev/null || {
-          printf "No message passed to %s\n" "$1" >&2
+          printf "No commit message passed to %s\n" "$1" >&2
           exit 1
         }
         ;;
       restore | install)
         [[ -z "$MODE" ]] || {
-          printf "Multiple actions are not supported!" >&2
+          printf "Multiple actions are not supported!\n" >&2
           exit 1
         }
         MODE="restore"
@@ -296,7 +296,7 @@ main() {
         ;;
       set)
         [[ -z "$MODE" ]] || {
-          printf "Multiple actions are not supported!"
+          printf "Multiple actions are not supported!\n"
           exit 1
         }
         MODE="set"
@@ -362,7 +362,7 @@ main() {
       done
       ;;
     *)
-      printf "Unknown mode: %s. Please open an issue if you are seeing this." "$MODE" >&2
+      printf "Unknown mode: %s. Please open an issue if you are seeing this.\n" "$MODE" >&2
       exit 1
       ;;
   esac
