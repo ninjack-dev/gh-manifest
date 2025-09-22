@@ -35,10 +35,10 @@ gh baz	ninjack/baz	eeeeee"
 #   - `$AppData/GitHub CLI` (on Windows if `$AppData` is set), or
 #   - `$HOME/.config/gh`.
 get_manifest_file() {
-  [[ -n $GH_CONFIG_DIR ]] && echo -n "$GH_CONFIG_DIR/manifest"
-  [[ -n $XDG_CONFIG_HOME ]] && echo -n "$XDG_CONFIG_HOME/gh/manifest"
-  [[ -n $AppData ]] && echo -n "$AppData/Github\ CLI/gh/manifest"
-  [[ -n $HOME ]] && echo -n "$HOME/.config/gh/manifest"
+  [[ -n $GH_CONFIG_DIR ]] && { echo -n "$GH_CONFIG_DIR/manifest"; return; }
+  [[ -n $XDG_CONFIG_HOME ]] && { echo -n "$XDG_CONFIG_HOME/gh/manifest"; return; }
+  [[ -n $AppData ]] && { echo -n "$AppData/Github\ CLI/gh/manifest"; return; }
+  [[ -n $HOME ]] && { echo -n "$HOME/.config/gh/manifest"; return; }
 }
 
 validate_manifest_file() {
