@@ -46,6 +46,8 @@ validate_manifest_file() {
     printf "Manifest file location could not be resolved!\n" >&2
     exit 1
   }
+  mkdir -p "$(dirname "$manifest_file")"
+  touch "$manifest_file"
 }
 
 show_help() {
