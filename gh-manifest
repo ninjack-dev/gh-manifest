@@ -1,35 +1,342 @@
 #!/usr/bin/env bash
-set -e
+# Utilizes git config for storing the manifest list and extension settings
+# https://git-scm.com/docs/git-config
+# with an emphasis on avoiding deprecated modes:
+# https://git-scm.com/docs/git-config#_deprecated_modes
+#
+# TODO:
+# - Use `gh repo search` along with `gh extension search` to cross reference installed extensions and uninstalled extensions
+# - Expand settings UI to reflect most of what is expected from git config
 
-echo "Hello gh-manifest!"
+declare -g manifest_file
+declare -Ag settings=(
+  ["commitOnSave"]="false"
+  ["alwaysLatest"]="true"
+  ["alwaysAppend"]="true"
+  ["commitMessage"]="chore: update gh manifest"
+)
 
-# Snippets to help get started:
+if [[ ${BASH_VERSION:0:1} -lt 4 ]]; then
+  printf "Bash is version %s; minimum required version is Bash 4." "$BASH_VERSION" >&2
+  exit 1
+fi
 
-# Determine if an executable is in the PATH
-# if ! type -p ruby >/dev/null; then
-#   echo "Ruby not found on the system" >&2
-#   exit 1
-# fi
+# https://www.gnu.org/software/bash/manual/html_node/Arrays.html
+test_gh_list_output="\
+gh foo	ninjack/foo	v0.2.1.3
+gh bar	ninjack/bar	v0.6.9
+gh baz	ninjack/baz	eeeeee"
 
-# Pass arguments through to another command
-# gh issue list "$@" -R cli/cli
+# From `gh environment`:
+#
+# `GH_CONFIG_DIR`: the directory where gh will store configuration files. If not specified,
+# the default value will be one of the following paths (in order of precedence):
+#   - `$XDG_CONFIG_HOME/gh` (if `$XDG_CONFIG_HOME` is set),
+#   - `$AppData/GitHub CLI` (on Windows if `$AppData` is set), or
+#   - `$HOME/.config/gh`.
+get_manifest_file() {
+  [[ -n $GH_CONFIG_DIR ]] && echo -n "$GH_CONFIG_DIR/manifest" && return 0
+  [[ -n $XDG_CONFIG_HOME ]] && echo -n "$XDG_CONFIG_HOME/gh/manifest" && return 0
+  [[ -n $AppData ]] && echo -n "$AppData/Github\ CLI/gh/manifest" && return 0
+  [[ -n $HOME ]] && echo -n "$HOME/.config/gh/manifest" && return 0
+  return 1
+}
 
-# Using the gh api command to retrieve and format information
-# QUERY='
-#   query($endCursor: String) {
-#     viewer {
-#       repositories(first: 100, after: $endCursor) {
-#         nodes {
-#           nameWithOwner
-#           stargazerCount
-#         }
-#       }
-#     }
-#   }
-# '
-# TEMPLATE='
-#   {{- range $repo := .data.viewer.repositories.nodes -}}
-#     {{- printf "name: %s - stargazers: %v\n" $repo.nameWithOwner $repo.stargazerCount -}}
-#   {{- end -}}
-# '
-# exec gh api graphql -f query="${QUERY}" --paginate --template="${TEMPLATE}"
+manifest_file="$(get_manifest_file)"
+
+show_help() {
+  echo -n \
+    "\
+Save or restore a gh CLI extension manifest for reproduction on another machine.
+
+Usage:
+  gh [action] <flags ...>
+
+save, update                Save the list of installed extensions to the manifest
+--append, -a                Append currently installed extension list to the one found in the manifest
+--commit, -c                Commit the changes to the manifest file to git
+--file=<file>, -f <file>    Write to a specific file.
+
+restore, install            Restore the list of installed extensions from the manifest
+--latest, -l                Install the latest version of each extension (useful if alwaysLatest config option is false)
+--exact, -e                 Install the exact listed version of each extension (useful if alwaysLatest config option is true)
+--file=<file>, -f <file>    Install from a specified file.
+
+set                         Set config options in \"option\" \"value\" pairs.
+
+The following are config options which are saved to the
+name            type   default                    description
+commitOnSave    bool   false                      Whether or not to commit the changes to the manifest in 
+commitMessage   string \"chore: update            The commit message used if commitOnSave is enabled, or if --commit is used
+                         gh extension manifest\"
+alwaysLatest    bool   true                       Whether or not to always install the latest version of a plugin
+alwaysAppend    bool   true                       Whether or not to append to the existing file, instead of overwriting
+"
+}
+
+# Get a config value by key in the manifest file
+get_config() {
+  local key="$1"
+
+  [[ -z $key ]] && return 1
+
+  git config get --file "$manifest_file" "manifestSettings.$key" 2> /dev/null
+}
+
+# Set a config value by key in the manifest file
+set_config() {
+  local key="$1"
+  local value="$2"
+
+  [[ -z $key || -z $value ]] && exit 1 # TODO: Expand this error case
+  [[ " ${!settings[*]} " == *" $key "* ]] || {
+    printf "Unknown configuration key: %s" "$key" >&2
+    exit 1
+  }
+
+  git config set --file "$manifest_file" manifestSettings."$key" "$value"
+}
+
+unset_config() {
+  local key="$1"
+  local value="$2"
+
+  [[ -z $key || -z $value ]] && exit 1 # TODO: Expand this error case
+  [[ " ${!settings[*]} " == *" $key "* ]] || {
+    printf "Unknown configuration key: %s" "$key" >&2
+    exit 1
+  }
+
+  git config unset --file "$manifest_file" manifestSettings."$key" "$value"
+}
+
+# Retrieves all config options from manifest file which have not been overridden by the user at runtime.
+retrieve_all_configs() {
+  for key in "${!settings[@]}"; do
+    value=$(get_config "$key")
+    [[ -n $value && -z "${settings[$key]}" ]] && settings[$key]=$value
+  done
+}
+
+# Write the current gh extension list to manifest
+write() {
+  # Clear old manifest.* subsections
+  if [[ ${settings["alwaysAppend"]} == "false" ]]; then
+    readarray -t extensions < <(git config --file "$manifest_file" get --all --show-names --regexp '^manifest\.' \
+      | cut -d. -f2 \
+      | sort -u)
+
+    for ext in "${extensions[@]}"; do
+      git config --file "$manifest_file" --remove-section manifest."$ext" 2> /dev/null
+    done
+  fi
+
+  # Read current extensions and write to config
+  gh extension list | while IFS=$'\t' read -r name repo version; do
+    git config --file "$manifest_file" manifest."$name".repo "$repo"
+    git config --file "$manifest_file" manifest."$name".version "$version"
+  done
+
+  # Optional git commit if commit_manifest is true
+  if [[ "${settings["commitOnSave"]}" == "true" ]]; then
+    # Resolve symlinks (for scenarios where utilities like stow is being used)
+    actual_file=$(
+      file="$manifest_file"
+      while file=$(readlink --canonicalize --no-newline "$file"); do :; done
+      echo -n "$file"
+    )
+    if git -C "$(dirname "$actual_file")" ls-files --error-unmatch "$(basename "$actual_file")" > /dev/null 2>&1; then
+      git -C "$(dirname "$actual_file")" add "$(basename "$actual_file")"
+      git -C "$(dirname "$actual_file")" commit -m
+    fi
+  fi
+}
+
+# Restore extensions from manifest
+# TODO:
+# - The initial `git config get` retrieves configurations in the following format:
+#   ```
+#   manifest.gh act.repo nektos/gh-act
+#   manifest.gh act.version v0.2.78
+#   ```
+#   As such, it's a bit redundant to call it twice more for the purpose of getting the repo and version. Worth looking into parsing it all from the initial string.
+# - Wrap the result of the initial `git config get` into an array
+# Overall, there's a lot of poor Bash here and it needs a rewrite.
+restore() {
+  git config get --file "$manifest_file" --all --show-names --regexp '^manifest\.' \
+    | cut -d. -f2 \
+    | sort -u \
+    | while read -r extension; do
+      echo "installing $extension"
+      local repo version
+      repo="$(git config get --file "$manifest_file" manifest."$extension".repo)"
+      version="$(git config get --file "$manifest_file" manifest."$extension".version)"
+
+      if [[ "${settings[alwaysLatest]}" == "true" ]]; then
+        gh extension install "$repo"
+      else
+        gh extension install "$repo" --pin "$version"
+      fi
+    done
+}
+
+main() {
+
+  [[ "$#" -eq 0 ]] && {
+    show_help
+    exit 1
+  }
+
+  declare MODE
+
+  # "Mutex" is not a great identifier here. It's just to determine if two mutually exclusive flags, e.g. --latest or --exact, are set.
+  # TODO:
+  # - Determine if:
+  #   1) there's a nicer way (i.e. one without a secondary variable) to see if two mutually exclusive flags are set
+  #   2) there's a clean way to use the conflicting flag in the error message
+  declare VERSION_MUTEX
+
+  while [[ "$#" -gt 0 ]]; do
+    [[ $1 == --*=* ]] && set -- "${1%%=*}" "${1#*=}" "${@:2}" # Expand --param=value arguments, thanks to this lovely comment: https://medium.com/@binaryphile/nice-one-elegant-in-its-simplicity-eee6b433bc90
+    case $1 in
+      ### GLOBAL FLAGS ###
+      --file* | -f)
+        manifest_file="$2"
+        shift 2 2> /dev/null || {
+          printf "No file passed" >&2
+          exit 1
+        }
+        ;;
+      -h | --help | help)
+        show_help
+        exit 0
+        ;;
+      ### ACTIONS ###
+      save | update)
+        [[ -z "$MODE" ]] || {
+          printf "Multiple actions are not supported!" >&2
+          exit 1
+        }
+        MODE="save"
+        shift
+        ;;
+      --append | -a)
+        [[ -z $MODE || $MODE == "save" ]] || {
+          printf "Unknown flag for %s: %s\n" "$MODE" "$1" >&2
+          exit 1
+        }
+        settings["alwaysAppend"]="true"
+        ;;
+      --commit | -c)
+        [[ -z $MODE || $MODE == "save" ]] || {
+          printf "Unknown flag for %s: %s\n" "$MODE" "$1" >&2
+          exit 1
+        }
+        settings["commitOnSave"]="true"
+        ;;
+      --message | -m)
+        [[ -z $MODE || $MODE == "save" ]] || {
+          printf "Unknown flag for %s: %s\n" "$MODE" "$1" >&2
+          exit 1
+        }
+        settings["commitMessage"]=$2
+        shift 2 2> /dev/null || {
+          printf "No message passed to %s\n" "$1" >&2
+          exit 1
+        }
+        ;;
+      restore | install)
+        [[ -z "$MODE" ]] || {
+          printf "Multiple actions are not supported!" >&2
+          exit 1
+        }
+        MODE="restore"
+        shift
+        ;;
+      --latest | -l)
+        [[ -z "$MODE" || $MODE == "restore" ]] || {
+          printf "Unknown flag for %s: %s\n" "$MODE" "$1" >&2
+          exit 1
+        }
+        [[ -z $VERSION_MUTEX ]] || {
+          printf "Conflicting flags: --exact (or -e) and %s\n" "$1" >&2
+          exit 1
+        }
+        settings["alwaysLatest"]="true"
+        shift
+        ;;
+      --exact | -e)
+        [[ -z "$MODE" || $MODE == "restore" ]] || {
+          printf "Unknown flag for %s: %s\n" "$MODE" "$1" >&2
+          exit 1
+        }
+        [[ -z $VERSION_MUTEX ]] || {
+          printf "Conflicting flags: --latest (or -l) and %s\n" "$1" >&2
+          exit 1
+        }
+        settings["alwaysLatest"]="false"
+        shift
+        ;;
+      set)
+        [[ -z "$MODE" ]] || {
+          printf "Multiple actions are not supported!"
+          exit 1
+        }
+        MODE="set"
+        shift
+        # TODO:
+        # - Validate config types as well, perhaps. See https://git-scm.com/docs/git-config#Documentation/git-config.txt---typetype
+        ;;
+      unset)
+        unset_config "$2"
+        shift 2 || {
+          printf "No config option provided to unset" >&2
+        exit 1
+        }
+        ;;
+      *)
+      # TODO: Break this out into its own function, perhaps
+        if [[ $MODE == "set" ]]; then
+          declare -A user_settings
+          while [[ "$#" -gt 0 ]]; do
+            [[ " ${!settings[*]} " == *" $1 "* ]] || {
+              printf "Key %s is not a supported option\n" "$1" >&2
+              exit 1
+            }
+            user_settings[$1]=$2
+            shift 2 2> /dev/null || {
+              printf "No value provided for config option %s\n" "$1" >&2
+              exit 1
+            }
+          done
+          for key in "${!user_settings[@]}"; do
+            set_config "$key" "${user_settings[$key]}"
+          done
+          exit
+        else
+          # TODO:
+          # - Expand this to allow for more advanced errors, e.g. if it's a flag, tie it to the given command.
+          printf "Unknown parameter: %s\n" "$1" >&2
+          exit 1
+        fi
+        ;;
+    esac
+  done
+
+  retrieve_all_configs
+
+  case "$MODE" in
+    "save")
+      write
+      ;;
+    "restore")
+      restore
+      ;;
+    *)
+      printf "Unknown mode: %s. Please open an issue if you are seeing this." "$MODE" >&2
+      exit 1
+      ;;
+  esac
+}
+
+main "$@"
