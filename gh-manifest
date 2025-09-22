@@ -110,7 +110,7 @@ unset_config() {
   local value="$2"
 
   [[ -z $key || -z $value ]] && exit 1 # TODO: Expand this error case
-  validate_key $key || {
+  validate_key "$key" || {
     printf "Unknown configuration key: %s\n" "$key" >&2
     exit 1
   }
@@ -120,7 +120,7 @@ unset_config() {
 
 validate_key() {
   local key="$1"
-  validate_key "$key" && return 0
+  [[ " ${!settings[*]} " == *" $key "* ]] && return 0
   return 1
 }
 
