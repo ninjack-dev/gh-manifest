@@ -106,12 +106,18 @@ unset_config() {
   local value="$2"
 
   [[ -z $key || -z $value ]] && exit 1 # TODO: Expand this error case
-  [[ " ${!settings[*]} " == *" $key "* ]] || {
+   validate_key $key || {
     printf "Unknown configuration key: %s" "$key" >&2
     exit 1
   }
 
   git config unset --file "$manifest_file" manifestSettings."$key" "$value"
+}
+
+validate_key() {
+  local key="$1"
+  validate_key "$key" && return 0
+  return 1
 }
 
 # Retrieves all config options from manifest file which have not been overridden by the user at runtime.
@@ -303,7 +309,7 @@ main() {
         if [[ $MODE == "set" ]]; then
           declare -A user_settings
           while [[ "$#" -gt 0 ]]; do
-            [[ " ${!settings[*]} " == *" $1 "* ]] || {
+            validate_key "$1" || {
               printf "Key %s is not a supported option\n" "$1" >&2
               exit 1
             }
