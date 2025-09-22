@@ -317,7 +317,7 @@ main() {
           }
           case "$MODE" in
             "set")
-              [[ -z "$2" ]] || {
+              [[ -z "$2" ]] && {
                 printf "No value provided to key %s\n" "$1"
                 exit 1
               }
