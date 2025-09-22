@@ -64,6 +64,7 @@ Actions:
 save, update             Save the list of installed extensions to the manifest
 --append, -a             Append currently installed extension list to the one found in the manifest
 --commit, -c             Commit the changes to the manifest file to git
+--message, -m            The commit message to use when committing
 
 restore, install         Restore the list of installed extensions from the manifest
 --latest, -l             Install the latest version of each extension (useful if alwaysLatest config option is false)
