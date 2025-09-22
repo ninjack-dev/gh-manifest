@@ -10,6 +10,13 @@
 
 declare -g manifest_file
 declare -Ag settings=(
+  ["commitOnSave"]=""
+  ["alwaysLatest"]=""
+  ["alwaysAppend"]=""
+  ["commitMessage"]=""
+)
+
+declare -Ag defaults=(
   ["commitOnSave"]="false"
   ["alwaysLatest"]="true"
   ["alwaysAppend"]="true"
@@ -131,7 +138,11 @@ validate_key() {
 retrieve_all_configs() {
   for key in "${!settings[@]}"; do
     value=$(get_config "$key")
-    [[ -n $value && -z "${settings[$key]}" ]] && settings[$key]=$value
+    if [[ -n $value && -z "${settings[$key]}" ]]; then
+      settings[$key]=$value
+    else
+      settings[$key]=${defaults[$key]}
+    fi
   done
 }
 
