@@ -150,7 +150,7 @@ retrieve_all_configs() {
 write() {
   # Clear old manifest.* subsections
   if [[ ${settings["alwaysAppend"]} == "false" ]]; then
-    readarray -t extensions < <(git config --file "$manifest_file" get --all --show-names --regexp '^manifest\.' \
+    readarray -t extensions < <(git config get --file "$manifest_file" --all --show-names --regexp '^manifest\.' \
       | cut -d. -f2 \
       | sort -u)
 
