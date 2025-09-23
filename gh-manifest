@@ -390,6 +390,9 @@ main() {
         unset_config "$key"
       done
       ;;
+    "")
+      printf "No action specified!\n" >&2
+      ;;
     *)
       printf "Unknown mode: %s. Please open an issue if you are seeing this.\n" "$MODE" >&2
       exit 1
