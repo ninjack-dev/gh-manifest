@@ -254,6 +254,7 @@ main() {
           exit 1
         }
         settings["alwaysAppend"]="true"
+        shift
         ;;
       --commit | -c)
         [[ -z $MODE || $MODE == "save" ]] || {
@@ -265,6 +266,7 @@ main() {
           exit 1
         }
         settings["commitOnSave"]="true"
+        shift
         ;;
       --nocommit | -n)
         [[ -z $MODE || $MODE == "save" ]] || {
@@ -276,6 +278,7 @@ main() {
           exit 1
         }
         settings["commitOnSave"]="false"
+        shift
         ;;
       --message | -m)
         [[ -z $MODE || $MODE == "save" ]] || {
