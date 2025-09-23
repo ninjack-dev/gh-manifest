@@ -262,13 +262,13 @@ main() {
           exit 1
         }
         [[ -z $COMMIT_MUTEX ]] || {
-          printf "Conflicting flags: --nocommit (or -n) and %s\n" "$1" >&2
+          printf "Conflicting flags: --no-commit (or -n) and %s\n" "$1" >&2
           exit 1
         }
         settings["commitOnSave"]="true"
         shift
         ;;
-      --nocommit | -n)
+      --no-commit | -n)
         [[ -z $MODE || $MODE == "save" ]] || {
           printf "Unknown flag for %s: %s\n" "$MODE" "$1" >&2
           exit 1
