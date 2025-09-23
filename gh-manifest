@@ -154,8 +154,8 @@ write() {
       | cut -d. -f2 \
       | sort -u)
 
-    for ext in "${extensions[@]}"; do
-      git config --file "$manifest_file" --remove-section manifest."$ext" 2> /dev/null
+    for extension in "${extensions[@]}"; do
+      git config --file "$manifest_file" --remove-section manifest."$extension" 2> /dev/null
     done
   fi
 
@@ -184,14 +184,13 @@ write() {
 #   manifest.gh act.version v0.2.78
 #   ```
 #   As such, it's a bit redundant to call it twice more for the purpose of getting the repo and version. Worth looking into parsing it all from the initial string.
-# - Wrap the result of the initial `git config get` into an array
 # Overall, there's a lot of poor Bash here and it needs a rewrite.
 restore() {
-  git config get --file "$manifest_file" --all --show-names --regexp '^manifest\.' \
-    | cut -d. -f2 \
-    | sort -u \
-    | while read -r extension; do
-      echo "installing $extension"
+    readarray -t extensions < <(git config get --file "$manifest_file" --all --show-names --regexp '^manifest\.' \
+      | cut -d. -f2 \
+      | sort -u)
+
+    for extension in "${extensions[@]}"; do
       local repo version
       repo="$(git config get --file "$manifest_file" manifest."$extension".repo)"
       version="$(git config get --file "$manifest_file" manifest."$extension".version)"
