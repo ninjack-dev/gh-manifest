@@ -73,6 +73,7 @@ Actions:
 save, update             Save the list of installed extensions to the manifest
 --append, -a             Append currently installed extension list to the one found in the manifest
 --commit, -c             Commit the changes to the manifest file to git
+--no-commit, -n          Skip committing the changes to the manifest file to git
 --message, -m            The commit message to use when committing
 
 restore, install         Restore the list of installed extensions from the manifest
@@ -219,6 +220,7 @@ main() {
   #   1) there's a nicer way (i.e. one without a secondary variable) to see if two mutually exclusive flags are set
   #   2) there's a clean way to use the conflicting flag in the error message
   declare VERSION_MUTEX
+  declare COMMIT_MUTEX 
 
   manifest_file="$(get_manifest_file)"
 
@@ -258,7 +260,22 @@ main() {
           printf "Unknown flag for %s: %s\n" "$MODE" "$1" >&2
           exit 1
         }
+        [[ -z $COMMIT_MUTEX ]] || {
+          printf "Conflicting flags: --nocommit (or -n) and %s\n" "$1" >&2
+          exit 1
+        }
         settings["commitOnSave"]="true"
+        ;;
+      --nocommit | -n)
+        [[ -z $MODE || $MODE == "save" ]] || {
+          printf "Unknown flag for %s: %s\n" "$MODE" "$1" >&2
+          exit 1
+        }
+        [[ -z $COMMIT_MUTEX ]] || {
+          printf "Conflicting flags: --commit (or -c) and %s\n" "$1" >&2
+          exit 1
+        }
+        settings["commitOnSave"]="false"
         ;;
       --message | -m)
         [[ -z $MODE || $MODE == "save" ]] || {
