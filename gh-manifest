@@ -74,6 +74,7 @@ save, update             Save the list of installed extensions to the manifest
 restore, install         Restore the list of installed extensions from the manifest
 --latest, -l             Install the latest version of each extension (useful if alwaysLatest config option is false)
 --exact, -e              Install the exact listed version of each extension (useful if alwaysLatest config option is true)
+--self, -s               Install this extension alongside all others; useful when setting up a remote system and curl-ing this script
 
 set [name value]...      Set config options in \"name\" \"value\" pairs.
 unset                    Unset config options by passing one or more names.
@@ -312,6 +313,10 @@ main() {
           exit 1
         }
         settings["alwaysLatest"]="false"
+        shift
+        ;;
+      --self | -s)
+        gh extension install ninjack-dev/gh-manifest
         shift
         ;;
       set)

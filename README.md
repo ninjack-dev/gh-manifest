@@ -1,5 +1,5 @@
 # gh-manifest
-A "package lock"-style manifest for declaratively installing plugins.
+A "package lock"-style manifest for declaratively installing `gh` CLI extensions.
 ## Usage
 To save the current list of installed extensions to the manifest, run:
 ```bash
