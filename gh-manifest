@@ -37,10 +37,22 @@ fi
 #   - `$AppData/GitHub CLI` (on Windows if `$AppData` is set), or
 #   - `$HOME/.config/gh`.
 get_manifest_file() {
-  [[ -n $GH_CONFIG_DIR ]] && { echo -n "$GH_CONFIG_DIR/manifest"; return; }
-  [[ -n $XDG_CONFIG_HOME ]] && { echo -n "$XDG_CONFIG_HOME/gh/manifest"; return; }
-  [[ -n $AppData ]] && { echo -n "$AppData/Github\ CLI/gh/manifest"; return; }
-  [[ -n $HOME ]] && { echo -n "$HOME/.config/gh/manifest"; return; }
+  [[ -n $GH_CONFIG_DIR ]] && {
+    echo -n "$GH_CONFIG_DIR/manifest"
+    return
+  }
+  [[ -n $XDG_CONFIG_HOME ]] && {
+    echo -n "$XDG_CONFIG_HOME/gh/manifest"
+    return
+  }
+  [[ -n $AppData ]] && {
+    echo -n "$AppData/Github\ CLI/gh/manifest"
+    return
+  }
+  [[ -n $HOME ]] && {
+    echo -n "$HOME/.config/gh/manifest"
+    return
+  }
 }
 
 validate_manifest_file() {
@@ -184,21 +196,21 @@ write() {
 #   As such, it's a bit redundant to call it twice more for the purpose of getting the repo and version. Worth looking into parsing it all from the initial string.
 # Overall, there's a lot of poor Bash here and it needs a rewrite.
 restore() {
-    readarray -t extensions < <(git config get --file "$manifest_file" --all --show-names --regexp '^manifest\.' \
-      | cut -d. -f2 \
-      | sort -u)
+  readarray -t extensions < <(git config get --file "$manifest_file" --all --show-names --regexp '^manifest\.' \
+    | cut -d. -f2 \
+    | sort -u)
 
-    for extension in "${extensions[@]}"; do
-      local repo version
-      repo="$(git config get --file "$manifest_file" manifest."$extension".repo)"
-      version="$(git config get --file "$manifest_file" manifest."$extension".version)"
+  for extension in "${extensions[@]}"; do
+    local repo version
+    repo="$(git config get --file "$manifest_file" manifest."$extension".repo)"
+    version="$(git config get --file "$manifest_file" manifest."$extension".version)"
 
-      if [[ "${settings[alwaysLatest]}" == "true" ]]; then
-        gh extension install "$repo"
-      else
-        gh extension install "$repo" --pin "$version"
-      fi
-    done
+    if [[ "${settings[alwaysLatest]}" == "true" ]]; then
+      gh extension install "$repo"
+    else
+      gh extension install "$repo" --pin "$version"
+    fi
+  done
 }
 
 main() {
@@ -213,7 +225,7 @@ main() {
   declare -a unset_settings
 
   declare VERSION_MUTEX
-  declare COMMIT_MUTEX 
+  declare COMMIT_MUTEX
 
   manifest_file="$(get_manifest_file)"
 
@@ -376,13 +388,19 @@ main() {
       restore
       ;;
     "set")
-      [[ -z "${user_settings[*]}" ]] && { printf "No setting keys passed to unset!\n" >&2; exit 1; }
+      [[ -z "${user_settings[*]}" ]] && {
+        printf "No setting keys passed to unset!\n" >&2
+        exit 1
+      }
       for key in "${!user_settings[@]}"; do
         set_config "$key" "${user_settings[$key]}"
       done
       ;;
     "unset")
-      [[ -z "${unset_settings[*]}" ]] && { printf "No setting keys passed to unset!\n" >&2; exit 1; }
+      [[ -z "${unset_settings[*]}" ]] && {
+        printf "No setting keys passed to unset!\n" >&2
+        exit 1
+      }
       for key in "${unset_settings[@]}"; do
         unset_config "$key"
       done
