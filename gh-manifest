@@ -29,11 +29,6 @@ if [[ ${BASH_VERSION:0:1} -lt 4 ]]; then
 fi
 
 # https://www.gnu.org/software/bash/manual/html_node/Arrays.html
-test_gh_list_output="\
-gh foo	ninjack/foo	v0.2.1.3
-gh bar	ninjack/bar	v0.6.9
-gh baz	ninjack/baz	eeeeee"
-
 # From `gh environment`:
 #
 # `GH_CONFIG_DIR`: the directory where gh will store configuration files. If not specified,
