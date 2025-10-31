@@ -209,11 +209,7 @@ main() {
   declare MODE
   declare -A user_settings
   declare -a unset_settings
-  # "Mutex" is not a great identifier here. It's just to determine if two mutually exclusive flags, e.g. --latest or --exact, are set.
-  # TODO:
-  # - Determine if:
-  #   1) there's a nicer way (i.e. one without a secondary variable) to see if two mutually exclusive flags are set
-  #   2) there's a clean way to use the conflicting flag in the error message
+
   declare VERSION_MUTEX
   declare COMMIT_MUTEX 
 
