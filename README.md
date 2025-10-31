@@ -18,5 +18,14 @@ If your extension list is available online as a raw file, you can install from t
 gh manifest restore --file <(curl -Ns https://example.com)
 ```
 
+It's also possible to install this extension and the contents of a manifest without preemptively installing this extension:
+```bash
+curl https://raw.githubusercontent.com/ninjack-dev/gh-manifest/refs/heads/main/gh-manifest | bash -s -- install -s
+```
+
 ### Configuration
 `gh-manifest` has a few configuration options, mostly to permanently enable some flags, which you can set using `gh manifest set <key> <value>`. See `gh manifest --help` for the full list of options.
+
+---
+
+Feature requests and contributions are welcome!
