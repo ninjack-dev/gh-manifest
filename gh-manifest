@@ -166,8 +166,9 @@ write() {
   if [[ "${settings["commitOnSave"]}" == "true" ]]; then
     # Resolve symlinks (for scenarios where utilities like stow is being used)
     actual_file=$(readlink --canonicalize --no-newline "$manifest_file")
-    if git -C "$(dirname "$actual_file")" ls-files --error-unmatch "$(basename "$actual_file")" > /dev/null; then
-      git -C "$(dirname "$actual_file")" add "$(basename "$actual_file")"
+    if git -C "$(dirname "$actual_file")" ls-files --error-unmatch "$actual_file" > /dev/null 2>&1 \
+      && [[ -n "$(git -C "$(dirname "$actual_file")" diff "$actual_file")" ]]; then
+      git -C "$(dirname "$actual_file")" add "$actual_file"
       git -C "$(dirname "$actual_file")" commit -m "${settings["commitMessage"]}"
     fi
   fi
