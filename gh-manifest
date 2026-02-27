@@ -78,7 +78,7 @@ Global flags:
 
 Actions:
 save, update             Save the list of installed extensions to the manifest
---append, -a             Append currently installed extension list to the one found in the manifest
+--append, -a             Append currently installed extension list to the one found in the manifest, instead of overwriting (default)
 --commit, -c             Commit the changes to the manifest file to git
 --no-commit, -n          Skip committing the changes to the manifest file to git
 --message, -m            The commit message to use when committing
