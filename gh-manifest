@@ -8,6 +8,11 @@
 # - Use `gh repo search` along with `gh extension search` to cross reference installed extensions and uninstalled extensions
 # - Expand settings UI to reflect most of what is expected from git config
 
+if [[ ${BASH_VERSION:0:1} -lt 4 ]]; then
+  printf "Bash is version %s; minimum required version is Bash 4.\n" "$BASH_VERSION" >&2
+  exit 1
+fi
+
 declare -g manifest_file
 
 declare -Ag settings=(
@@ -16,11 +21,6 @@ declare -Ag settings=(
   ["commitOnSave"]="false"
   ["commitMessage"]="chore: update gh manifest"
 )
-
-if [[ ${BASH_VERSION:0:1} -lt 4 ]]; then
-  printf "Bash is version %s; minimum required version is Bash 4.\n" "$BASH_VERSION" >&2
-  exit 1
-fi
 
 # https://www.gnu.org/software/bash/manual/html_node/Arrays.html
 # From `gh environment`:
