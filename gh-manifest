@@ -9,17 +9,11 @@
 # - Expand settings UI to reflect most of what is expected from git config
 
 declare -g manifest_file
-declare -Ag settings=(
-  ["commitOnSave"]=""
-  ["alwaysLatest"]=""
-  ["alwaysAppend"]=""
-  ["commitMessage"]=""
-)
 
-declare -Ag defaults=(
-  ["commitOnSave"]="false"
+declare -Ag settings=(
   ["alwaysLatest"]="true"
   ["alwaysAppend"]="true"
+  ["commitOnSave"]="false"
   ["commitMessage"]="chore: update gh manifest"
 )
 
@@ -143,14 +137,12 @@ validate_key() {
   return 1
 }
 
-# Retrieves all config options from manifest file which have not been overridden by the user at runtime.
-retrieve_all_configs() {
+# Retrieves all config options from manifest file
+retrieve_config() {
   for key in "${!settings[@]}"; do
     value=$(get_config "$key")
-    if [[ -n $value && -z "${settings[$key]}" ]]; then
+    if [[ -n $value ]]; then
       settings[$key]=$value
-    else
-      settings[$key]=${defaults[$key]}
     fi
   done
 }
@@ -228,6 +220,8 @@ main() {
   declare COMMIT_MUTEX
 
   manifest_file="$(get_manifest_file)"
+  validate_manifest_file
+  retrieve_config
 
   while [[ "$#" -gt 0 ]]; do
     [[ $1 == --*=* ]] && set -- "${1%%=*}" "${1#*=}" "${@:2}" # Expand --param=value arguments, thanks to this lovely comment: https://medium.com/@binaryphile/nice-one-elegant-in-its-simplicity-eee6b433bc90
@@ -376,9 +370,6 @@ main() {
         ;;
     esac
   done
-
-  validate_manifest_file
-  retrieve_all_configs
 
   case "$MODE" in
     "save")
